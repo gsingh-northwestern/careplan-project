@@ -67,10 +67,22 @@ class PatientDuplicateTests(TestCase):
             dob=date(1980, 1, 15)
         )
 
-    def test_exact_mrn_match_blocks(self):
-        """Exact MRN match should return blocking result."""
-        result = check_patient_duplicate('John', 'Doe', '123456')
-        self.assertEqual(result.type, 'block')
+    def test_same_mrn_matching_info_ok(self):
+        """Same MRN with matching name/DOB should be OK (patient reuse)."""
+        result = check_patient_duplicate('John', 'Doe', '123456', dob=date(1980, 1, 15))
+        self.assertEqual(result.type, 'ok')
+
+    def test_same_mrn_mismatched_name_warns(self):
+        """Same MRN with different name should warn (data entry mismatch)."""
+        result = check_patient_duplicate('Jane', 'Smith', '123456', dob=date(1980, 1, 15))
+        self.assertEqual(result.type, 'warn')
+        self.assertIn('already exists', result.message)
+        self.assertIn('existing patient record will be used', result.message)
+
+    def test_same_mrn_mismatched_dob_warns(self):
+        """Same MRN with different DOB should warn (data entry mismatch)."""
+        result = check_patient_duplicate('John', 'Doe', '123456', dob=date(1990, 6, 20))
+        self.assertEqual(result.type, 'warn')
         self.assertIn('already exists', result.message)
 
     def test_different_mrn_ok(self):

@@ -3,11 +3,14 @@ Duplicate detection for the Care Plan Generator.
 
 Detects potential duplicate entries for:
 - Providers: Exact NPI match (block) or similar name with different NPI (warn)
-- Patients: Exact MRN match (block) or same name+DOB with different MRN (warn)
+- Patients: Same MRN with mismatched name/DOB (warn) or same name+DOB with different MRN (warn)
 - Orders: Same patient + medication within time window (two-tier severity)
 
+Note: Patients with same MRN are NOT blocked because patients can have multiple orders.
+The system reuses existing patient records for new orders.
+
 Result types:
-- 'block': Cannot proceed, duplicate exists
+- 'block': Cannot proceed, duplicate exists (providers only)
 - 'warn': Can proceed but user should verify
 - 'ok': No duplicates detected
 """
@@ -152,11 +155,14 @@ def check_patient_duplicate(
     exclude_id: Optional[int] = None
 ) -> DuplicateResult:
     """
-    Check for duplicate patients.
+    Check for patient data entry issues.
 
     Detection rules:
-    1. Exact MRN match -> BLOCK (MRN must be unique)
-    2. Same name + DOB with different MRN -> WARN (might be same person)
+    1. MRN exists with DIFFERENT name/DOB -> WARN (data entry mismatch)
+    2. Same name + DOB with different MRN -> WARN (might be same person, different MRN)
+
+    Note: Same MRN is NOT blocked because patients can have multiple orders.
+    The system will reuse existing patient records for new orders.
 
     Args:
         first_name: Patient first name
@@ -166,29 +172,42 @@ def check_patient_duplicate(
         exclude_id: Patient ID to exclude (for updates)
 
     Returns:
-        DuplicateResult with type 'block', 'warn', or 'ok'
+        DuplicateResult with type 'warn' or 'ok' (never 'block' for patients)
     """
     if not mrn:
         return DuplicateResult('ok')
 
-    # Check for exact MRN match
+    # Check for existing patient with same MRN but different info
     mrn_query = Patient.objects.filter(mrn=mrn)
     if exclude_id:
         mrn_query = mrn_query.exclude(id=exclude_id)
 
-    exact_mrn = mrn_query.first()
-    if exact_mrn:
-        return DuplicateResult(
-            'block',
-            f"Patient with MRN {mrn} already exists: {exact_mrn.first_name} {exact_mrn.last_name}",
-            [{
-                'id': exact_mrn.id,
-                'name': f"{exact_mrn.first_name} {exact_mrn.last_name}",
-                'mrn': exact_mrn.mrn
-            }]
+    existing = mrn_query.first()
+    if existing:
+        # Check if the entered name/DOB matches the existing patient
+        name_matches = (
+            existing.first_name.lower() == first_name.strip().lower() and
+            existing.last_name.lower() == last_name.strip().lower()
         )
+        dob_matches = (dob is None or existing.dob == dob)
 
-    # Check for same name + DOB with different MRN
+        if not name_matches or not dob_matches:
+            # Warn about data mismatch - they're entering different info for same MRN
+            return DuplicateResult(
+                'warn',
+                f"Patient with MRN {mrn} already exists as {existing.first_name} {existing.last_name} "
+                f"(DOB: {existing.dob}). The existing patient record will be used for this order.",
+                [{
+                    'id': existing.id,
+                    'name': f"{existing.first_name} {existing.last_name}",
+                    'mrn': existing.mrn,
+                    'dob': str(existing.dob) if existing.dob else None
+                }]
+            )
+        # Same MRN with matching info - OK, will reuse patient
+        return DuplicateResult('ok')
+
+    # Check for same name + DOB with different MRN (potential duplicate patient record)
     if first_name and last_name and dob:
         name_dob_query = Patient.objects.filter(
             first_name__iexact=first_name.strip(),
