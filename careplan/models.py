@@ -201,6 +201,17 @@ class CarePlan(models.Model):
         help_text="Time taken to generate the care plan in milliseconds"
     )
 
+    # Edit tracking fields
+    is_edited = models.BooleanField(
+        default=False,
+        help_text="Whether the care plan content has been manually edited"
+    )
+    edited_at = models.DateTimeField(
+        null=True,
+        blank=True,
+        help_text="Timestamp of last manual edit"
+    )
+
     class Meta:
         verbose_name = "Care Plan"
         verbose_name_plural = "Care Plans"

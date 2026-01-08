@@ -18,6 +18,11 @@ urlpatterns = [
     path('api/check-provider/', views.check_provider_api, name='check_provider_api'),
     path('api/check-patient/', views.check_patient_api, name='check_patient_api'),
 
+    # Care plan editing endpoints (HTMX)
+    path('api/care-plan/<int:care_plan_id>/edit-form/', views.care_plan_edit_form, name='care_plan_edit_form'),
+    path('api/care-plan/<int:care_plan_id>/save/', views.save_care_plan_edit, name='save_care_plan_edit'),
+    path('api/care-plan/<int:care_plan_id>/display/', views.care_plan_display, name='care_plan_display'),
+
     # Export
     path('export/csv/', views.export_orders_csv, name='export_orders_csv'),
 ]

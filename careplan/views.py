@@ -16,6 +16,7 @@ from django.shortcuts import render, redirect, get_object_or_404
 from django.http import HttpResponse, JsonResponse
 from django.views.decorators.http import require_http_methods, require_POST, require_GET
 from django.contrib import messages
+from django.utils import timezone
 
 from .models import Provider, Patient, Order, CarePlan
 from .forms import OrderForm
@@ -279,6 +280,66 @@ def check_patient_api(request):
         })
 
     return HttpResponse('')
+
+
+# =============================================================================
+# Care Plan Editing Endpoints (HTMX)
+# =============================================================================
+
+@require_GET
+def care_plan_edit_form(request, care_plan_id):
+    """
+    HTMX endpoint to render the care plan edit form.
+    """
+    care_plan = get_object_or_404(CarePlan, id=care_plan_id)
+
+    return render(request, 'partials/care_plan_edit.html', {
+        'care_plan': care_plan,
+        'order': care_plan.order,
+    })
+
+
+@require_POST
+def save_care_plan_edit(request, care_plan_id):
+    """
+    HTMX endpoint to save edited care plan content.
+    Returns the updated care plan display partial.
+    """
+    care_plan = get_object_or_404(CarePlan, id=care_plan_id)
+
+    content = request.POST.get('content', '').strip()
+
+    if not content:
+        return HttpResponse(
+            '<div class="p-3 bg-red-50 border border-red-200 rounded text-red-700 text-sm">'
+            'Care plan content cannot be empty.</div>',
+            status=400
+        )
+
+    # Update care plan
+    care_plan.content = content
+    care_plan.is_edited = True
+    care_plan.edited_at = timezone.now()
+    care_plan.save()
+
+    # Return the display partial (non-edit mode)
+    return render(request, 'partials/care_plan_display.html', {
+        'care_plan': care_plan,
+        'order': care_plan.order,
+    })
+
+
+@require_GET
+def care_plan_display(request, care_plan_id):
+    """
+    HTMX endpoint to render the care plan display (cancel edit mode).
+    """
+    care_plan = get_object_or_404(CarePlan, id=care_plan_id)
+
+    return render(request, 'partials/care_plan_display.html', {
+        'care_plan': care_plan,
+        'order': care_plan.order,
+    })
 
 
 # =============================================================================

@@ -116,33 +116,7 @@
 
     <!-- Care Plan -->
     {% if care_plan %}
-    <div class="card">
-        <div class="card-section border-b border-border">
-            <div class="flex justify-between items-center">
-                <div>
-                    <h2 class="text-base font-medium text-fg">Generated Care Plan</h2>
-                    <p class="text-xs text-fg-muted mt-0.5">
-                        {{ care_plan.generated_at|date:"M d, Y H:i" }} · {{ care_plan.model_used }}
-                        {% if care_plan.generation_time_ms %} · {{ care_plan.generation_time_ms }}ms{% endif %}
-                    </p>
-                </div>
-                <form method="post" action="{% url 'generate_care_plan' order.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn-ghost h-8 text-xs">
-                        <svg class="w-3.5 h-3.5 mr-1" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
-                            <path stroke-linecap="round" stroke-linejoin="round" d="M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15" />
-                        </svg>
-                        Regenerate
-                    </button>
-                </form>
-            </div>
-        </div>
-        <div class="card-section">
-            <div class="bg-surface-1 border border-border rounded p-4 overflow-auto">
-                <pre class="whitespace-pre-wrap text-sm text-fg font-sans leading-relaxed">{{ care_plan.content }}</pre>
-            </div>
-        </div>
-    </div>
+        {% include 'partials/care_plan_display.html' with care_plan=care_plan order=order %}
     {% else %}
     <!-- No Care Plan Yet -->
     <div class="card">

@@ -3,18 +3,37 @@ LLM Service for generating care plans.
 
 Provides the interface for care plan generation using Claude API.
 Supports both production mode and mock mode for testing without API access.
+Includes few-shot learning from recent care plans for improved generation quality.
 """
 
 import logging
 import time
-from typing import Tuple
+from typing import Tuple, List, Optional
 
 from django.conf import settings
 
 logger = logging.getLogger('careplan')
 
+# Maximum characters per example to avoid context window issues
+MAX_EXAMPLE_LENGTH = 3000
+
+# Template for including few-shot examples in the prompt
+EXAMPLES_SECTION_TEMPLATE = """## Reference Examples
+
+Below are examples of previously generated care plans. Use these as a reference for style, structure, and level of detail. Adapt the content appropriately for the current patient.
+
+{examples}
+
+---
+
+## Instructions
+Generate a care plan for the patient below, following a similar style and level of detail as the examples above.
+
+"""
+
 # Care plan generation prompt template
 CARE_PLAN_PROMPT = """You are a clinical pharmacist assistant. Based on the patient records provided, generate a comprehensive care plan following clinical guidelines.
+{example_section}
 
 ## Patient Information
 - Name: {patient_name}
@@ -112,6 +131,70 @@ def generate_care_plan(order) -> Tuple[str, int, str]:
         return _generate_claude_care_plan(order)
 
 
+def get_recent_care_plans(limit: int = 3, exclude_order_id: Optional[int] = None) -> List:
+    """
+    Fetch the most recent care plans for use as few-shot examples.
+
+    Args:
+        limit: Maximum number of care plans to return
+        exclude_order_id: Order ID to exclude (to avoid using current order's plan)
+
+    Returns:
+        List of CarePlan objects ordered by generated_at descending
+    """
+    from .models import CarePlan
+
+    queryset = CarePlan.objects.select_related(
+        'order',
+        'order__patient',
+        'order__provider'
+    ).order_by('-generated_at')
+
+    if exclude_order_id:
+        queryset = queryset.exclude(order_id=exclude_order_id)
+
+    return list(queryset[:limit])
+
+
+def format_care_plan_examples(care_plans: List) -> str:
+    """
+    Format care plans as few-shot examples for the prompt.
+
+    Truncates very long care plans to manage context window.
+
+    Args:
+        care_plans: List of CarePlan objects
+
+    Returns:
+        Formatted string with numbered examples
+    """
+    if not care_plans:
+        return ""
+
+    examples = []
+
+    for i, cp in enumerate(care_plans, 1):
+        order = cp.order
+
+        # Truncate content if too long
+        content = cp.content
+        if len(content) > MAX_EXAMPLE_LENGTH:
+            content = content[:MAX_EXAMPLE_LENGTH] + "\n\n[... truncated for brevity ...]"
+
+        example = f"""
+### EXAMPLE {i}
+**Patient:** {order.patient.first_name} {order.patient.last_name}
+**Diagnosis:** {order.primary_diagnosis_code} - {order.primary_diagnosis_description}
+**Medication:** {order.medication_name}
+
+**CARE PLAN OUTPUT:**
+{content}
+"""
+        examples.append(example)
+
+    return "\n---\n".join(examples)
+
+
 def _generate_claude_care_plan(order) -> Tuple[str, int, str]:
     """
     Generate care plan using Claude API.
@@ -138,8 +221,21 @@ def _generate_claude_care_plan(order) -> Tuple[str, int, str]:
         timeout=300.0  # 5 minute timeout for care plan generation
     )
 
-    # Format the prompt with order data
+    # Fetch recent care plans for few-shot learning
+    recent_plans = get_recent_care_plans(limit=3, exclude_order_id=order.id)
+
+    # Build example section
+    example_section = ""
+    if recent_plans:
+        examples_text = format_care_plan_examples(recent_plans)
+        example_section = EXAMPLES_SECTION_TEMPLATE.format(examples=examples_text)
+        logger.info(f"Including {len(recent_plans)} care plan examples in prompt")
+    else:
+        logger.info("No previous care plans available for few-shot learning")
+
+    # Format the prompt with order data AND examples
     prompt = CARE_PLAN_PROMPT.format(
+        example_section=example_section,
         patient_name=f"{order.patient.first_name} {order.patient.last_name}",
         mrn=order.patient.mrn,
         primary_diagnosis=f"{order.primary_diagnosis_code} - {order.primary_diagnosis_description}",
@@ -191,6 +287,10 @@ def _generate_mock_care_plan(order) -> Tuple[str, int, str]:
     # Simulate some processing time
     time.sleep(0.5)
     start_time = time.time()
+
+    # Log example usage even in mock mode for testing
+    recent_plans = get_recent_care_plans(limit=3, exclude_order_id=order.id)
+    logger.info(f"Mock mode: Would use {len(recent_plans)} examples in production")
 
     mock_content = f"""# Care Plan for {order.patient.first_name} {order.patient.last_name}
 
