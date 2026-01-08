@@ -1,0 +1,301 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}Care Plan Generator{% endblock %} | Lamar Health</title>
+
+    <!-- Typography: Inter Font -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+    <!-- Tailwind CSS via CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <!-- HTMX -->
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+
+    <!-- Design System Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    fontFamily: {
+                        sans: ['Inter', 'system-ui', '-apple-system', 'sans-serif'],
+                        mono: ['JetBrains Mono', 'monospace'],
+                    },
+                    colors: {
+                        // Slate foundation for trust & professionalism
+                        'surface': {
+                            '0': '#ffffff',
+                            '1': '#f8fafc',
+                            '2': '#f1f5f9',
+                            '3': '#e2e8f0',
+                        },
+                        'border': {
+                            'DEFAULT': 'rgba(0, 0, 0, 0.08)',
+                            'strong': 'rgba(0, 0, 0, 0.12)',
+                        },
+                        // Text hierarchy
+                        'fg': {
+                            'DEFAULT': '#0f172a',
+                            'secondary': '#475569',
+                            'muted': '#64748b',
+                            'faint': '#94a3b8',
+                        },
+                        // Teal accent for healthcare trust
+                        'accent': {
+                            '50': '#f0fdfa',
+                            '100': '#ccfbf1',
+                            '500': '#14b8a6',
+                            '600': '#0d9488',
+                            '700': '#0f766e',
+                        },
+                    },
+                    fontSize: {
+                        'xs': ['11px', '16px'],
+                        'sm': ['13px', '20px'],
+                        'base': ['14px', '22px'],
+                        'lg': ['16px', '24px'],
+                        'xl': ['18px', '28px'],
+                        '2xl': ['24px', '32px'],
+                    },
+                    spacing: {
+                        '0': '0',
+                        '1': '4px',
+                        '2': '8px',
+                        '3': '12px',
+                        '4': '16px',
+                        '5': '20px',
+                        '6': '24px',
+                        '8': '32px',
+                        '10': '40px',
+                        '12': '48px',
+                    },
+                    borderRadius: {
+                        'sm': '4px',
+                        'DEFAULT': '6px',
+                        'lg': '8px',
+                    },
+                },
+            },
+        }
+    </script>
+
+    <style type="text/tailwindcss">
+        /* Base styles */
+        body {
+            @apply font-sans text-fg bg-surface-1 antialiased;
+            letter-spacing: -0.01em;
+        }
+
+        /* Form inputs - clean, minimal */
+        .form-input {
+            @apply w-full h-10 px-3 text-base text-fg bg-surface-0
+                   border border-border rounded transition-colors duration-150
+                   placeholder:text-fg-faint
+                   focus:outline-none focus:border-border-strong focus:ring-1 focus:ring-accent-500/20;
+        }
+
+        .form-input-mono {
+            @apply form-input font-mono tracking-wide;
+        }
+
+        .form-textarea {
+            @apply w-full px-3 py-3 text-sm text-fg bg-surface-0
+                   border border-border rounded transition-colors duration-150
+                   placeholder:text-fg-faint
+                   focus:outline-none focus:border-border-strong focus:ring-1 focus:ring-accent-500/20
+                   resize-y;
+        }
+
+        .form-label {
+            @apply block text-sm font-medium text-fg mb-2;
+        }
+
+        .form-hint {
+            @apply text-xs text-fg-muted mt-1;
+        }
+
+        /* Buttons */
+        .btn {
+            @apply inline-flex items-center justify-center h-9 px-4
+                   text-sm font-medium rounded transition-all duration-150
+                   focus:outline-none focus:ring-2 focus:ring-offset-2;
+        }
+
+        .btn-primary {
+            @apply btn bg-fg text-surface-0
+                   hover:bg-fg/90
+                   focus:ring-fg/30;
+        }
+
+        .btn-secondary {
+            @apply btn bg-surface-0 text-fg border border-border
+                   hover:bg-surface-1 hover:border-border-strong
+                   focus:ring-fg/10;
+        }
+
+        .btn-ghost {
+            @apply btn text-fg-secondary
+                   hover:bg-surface-2 hover:text-fg
+                   focus:ring-fg/10;
+        }
+
+        /* Cards - subtle borders, no heavy shadows */
+        .card {
+            @apply bg-surface-0 border border-border rounded-lg;
+        }
+
+        .card-section {
+            @apply p-6;
+        }
+
+        .card-section + .card-section {
+            @apply border-t border-border;
+        }
+
+        .section-title {
+            @apply text-xs font-medium text-fg-muted uppercase tracking-wider mb-4;
+        }
+
+        /* Alerts - minimal, clear */
+        .alert {
+            @apply flex items-start gap-3 p-4 rounded border text-sm;
+        }
+
+        .alert-success {
+            @apply bg-emerald-50/50 border-emerald-200 text-emerald-800;
+        }
+
+        .alert-warning {
+            @apply bg-amber-50/50 border-amber-200 text-amber-800;
+        }
+
+        .alert-error {
+            @apply bg-red-50/50 border-red-200 text-red-800;
+        }
+
+        .alert-info {
+            @apply bg-surface-2 border-border text-fg-secondary;
+        }
+
+        /* Data display */
+        .data-label {
+            @apply text-xs font-medium text-fg-muted uppercase tracking-wider;
+        }
+
+        .data-value {
+            @apply text-base text-fg mt-1;
+        }
+
+        .data-value-mono {
+            @apply data-value font-mono;
+        }
+
+        /* Status badges */
+        .badge {
+            @apply inline-flex items-center h-6 px-2 text-xs font-medium rounded;
+        }
+
+        .badge-success {
+            @apply bg-emerald-100 text-emerald-700;
+        }
+
+        .badge-warning {
+            @apply bg-amber-100 text-amber-700;
+        }
+
+        .badge-default {
+            @apply bg-surface-2 text-fg-secondary;
+        }
+
+        /* HTMX states */
+        .htmx-indicator {
+            opacity: 0;
+            transition: opacity 150ms ease;
+        }
+
+        .htmx-request .htmx-indicator,
+        .htmx-request.htmx-indicator {
+            opacity: 1;
+        }
+
+        /* Transitions */
+        * {
+            transition-property: background-color, border-color, color, opacity;
+            transition-timing-function: cubic-bezier(0.25, 1, 0.5, 1);
+            transition-duration: 150ms;
+        }
+    </style>
+</head>
+<body class="min-h-screen flex flex-col">
+    <!-- Navigation - minimal, functional -->
+    <nav class="h-14 bg-surface-0 border-b border-border flex-shrink-0">
+        <div class="h-full max-w-5xl mx-auto px-6 flex items-center justify-between">
+            <div class="flex items-center gap-6">
+                <a href="{% url 'order_create' %}" class="flex items-center gap-2 text-fg font-semibold">
+                    <svg class="w-5 h-5 text-accent-600" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                        <path stroke-linecap="round" stroke-linejoin="round" d="M9 12h6m-6 4h6m2 5H7a2 2 0 01-2-2V5a2 2 0 012-2h5.586a1 1 0 01.707.293l5.414 5.414a1 1 0 01.293.707V19a2 2 0 01-2 2z" />
+                    </svg>
+                    <span>Lamar Health</span>
+                </a>
+                <div class="h-4 w-px bg-border"></div>
+                <nav class="flex items-center gap-1">
+                    <a href="{% url 'order_create' %}" class="btn-ghost h-8 px-3 text-sm">New Order</a>
+                    <a href="{% url 'order_list' %}" class="btn-ghost h-8 px-3 text-sm">Orders</a>
+                </nav>
+            </div>
+            <a href="{% url 'export_orders_csv' %}" class="btn-secondary h-8 text-xs">
+                <svg class="w-4 h-4 mr-1.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5">
+                    <path stroke-linecap="round" stroke-linejoin="round" d="M3 16.5v2.25A2.25 2.25 0 005.25 21h13.5A2.25 2.25 0 0021 18.75V16.5M16.5 12L12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg>
+                Export
+            </a>
+        </div>
+    </nav>
+
+    <!-- Messages -->
+    {% if messages %}
+    <div class="max-w-5xl mx-auto px-6 pt-6">
+        {% for message in messages %}
+        <div class="alert mb-3 {% if message.tags == 'success' %}alert-success{% elif message.tags == 'warning' %}alert-warning{% elif message.tags == 'error' %}alert-error{% else %}alert-info{% endif %}">
+            {% if message.tags == 'success' %}
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7" />
+            </svg>
+            {% elif message.tags == 'warning' %}
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-3L13.732 4c-.77-1.333-2.694-1.333-3.464 0L3.34 16c-.77 1.333.192 3 1.732 3z" />
+            </svg>
+            {% elif message.tags == 'error' %}
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+            </svg>
+            {% else %}
+            <svg class="w-4 h-4 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            {% endif %}
+            <span>{{ message }}</span>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
+
+    <!-- Main Content -->
+    <main class="flex-1 max-w-5xl w-full mx-auto px-6 py-8">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer - minimal -->
+    <footer class="flex-shrink-0 border-t border-border bg-surface-0">
+        <div class="max-w-5xl mx-auto px-6 py-4">
+            <p class="text-xs text-fg-faint text-center">
+                Lamar Health Care Plan Generator
+            </p>
+        </div>
+    </footer>
+</body>
+</html>

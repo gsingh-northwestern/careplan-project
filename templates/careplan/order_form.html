@@ -1,0 +1,230 @@
+{% extends 'base.html' %}
+
+{% block title %}New Order{% endblock %}
+
+{% block content %}
+<div class="space-y-6">
+    <!-- Page Header -->
+    <div>
+        <h1 class="text-2xl font-semibold text-fg">New Care Plan Order</h1>
+        <p class="mt-1 text-sm text-fg-secondary">Enter patient and provider details to generate a care plan.</p>
+    </div>
+
+    <form method="post" class="space-y-6">
+        {% csrf_token %}
+
+        <!-- Provider Information -->
+        <div class="card">
+            <div class="card-section">
+                <h2 class="section-title">Provider Information</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_provider_name" class="form-label">
+                            Provider Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="provider_name" id="id_provider_name"
+                               class="form-input"
+                               placeholder="Dr. Jane Smith"
+                               value="{{ form.provider_name.value|default:'' }}"
+                               hx-post="{% url 'check_provider_api' %}"
+                               hx-trigger="blur changed delay:300ms"
+                               hx-target="#provider-warning"
+                               hx-include="[name=provider_npi]"
+                               required>
+                        {% if form.provider_name.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.provider_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_provider_npi" class="form-label">
+                            Provider NPI <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="provider_npi" id="id_provider_npi"
+                               class="form-input-mono"
+                               placeholder="1234567890"
+                               maxlength="10"
+                               pattern="\d{10}"
+                               value="{{ form.provider_npi.value|default:'' }}"
+                               hx-post="{% url 'check_provider_api' %}"
+                               hx-trigger="blur changed delay:300ms"
+                               hx-target="#provider-warning"
+                               hx-include="[name=provider_name]"
+                               required>
+                        <p class="form-hint">Exactly 10 digits</p>
+                        {% if form.provider_npi.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.provider_npi.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="provider-warning" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Patient Information -->
+        <div class="card">
+            <div class="card-section">
+                <h2 class="section-title">Patient Information</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div>
+                        <label for="id_patient_first_name" class="form-label">
+                            First Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="patient_first_name" id="id_patient_first_name"
+                               class="form-input"
+                               placeholder="John"
+                               value="{{ form.patient_first_name.value|default:'' }}"
+                               required>
+                        {% if form.patient_first_name.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.patient_first_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_patient_last_name" class="form-label">
+                            Last Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="patient_last_name" id="id_patient_last_name"
+                               class="form-input"
+                               placeholder="Doe"
+                               value="{{ form.patient_last_name.value|default:'' }}"
+                               required>
+                        {% if form.patient_last_name.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.patient_last_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_patient_mrn" class="form-label">
+                            MRN <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="patient_mrn" id="id_patient_mrn"
+                               class="form-input-mono"
+                               placeholder="123456"
+                               maxlength="6"
+                               pattern="\d{6}"
+                               value="{{ form.patient_mrn.value|default:'' }}"
+                               hx-post="{% url 'check_patient_api' %}"
+                               hx-trigger="blur changed delay:300ms"
+                               hx-target="#patient-warning"
+                               hx-include="[name=patient_first_name],[name=patient_last_name],[name=patient_dob]"
+                               required>
+                        <p class="form-hint">6 digits</p>
+                        {% if form.patient_mrn.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.patient_mrn.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_patient_dob" class="form-label">Date of Birth</label>
+                        <input type="date" name="patient_dob" id="id_patient_dob"
+                               class="form-input"
+                               value="{{ form.patient_dob.value|default:'' }}">
+                        {% if form.patient_dob.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.patient_dob.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+                <div id="patient-warning" class="mt-3"></div>
+            </div>
+        </div>
+
+        <!-- Diagnosis & Medication -->
+        <div class="card">
+            <div class="card-section">
+                <h2 class="section-title">Diagnosis & Medication</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                        <label for="id_primary_diagnosis_code" class="form-label">
+                            Primary Diagnosis (ICD-10) <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="primary_diagnosis_code" id="id_primary_diagnosis_code"
+                               class="form-input-mono"
+                               placeholder="G70.00"
+                               value="{{ form.primary_diagnosis_code.value|default:'' }}"
+                               required>
+                        <p class="form-hint">Format: A00 or A00.0000</p>
+                        {% if form.primary_diagnosis_code.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.primary_diagnosis_code.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_primary_diagnosis_description" class="form-label">
+                            Diagnosis Description
+                        </label>
+                        <input type="text" name="primary_diagnosis_description" id="id_primary_diagnosis_description"
+                               class="form-input"
+                               placeholder="Myasthenia gravis"
+                               value="{{ form.primary_diagnosis_description.value|default:'' }}">
+                        {% if form.primary_diagnosis_description.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.primary_diagnosis_description.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_medication_name" class="form-label">
+                            Medication Name <span class="text-red-500">*</span>
+                        </label>
+                        <input type="text" name="medication_name" id="id_medication_name"
+                               class="form-input"
+                               placeholder="IVIG"
+                               value="{{ form.medication_name.value|default:'' }}"
+                               required>
+                        {% if form.medication_name.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.medication_name.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div>
+                        <label for="id_additional_diagnoses" class="form-label">
+                            Additional Diagnoses
+                        </label>
+                        <input type="text" name="additional_diagnoses" id="id_additional_diagnoses"
+                               class="form-input-mono"
+                               placeholder="I10, K21.0"
+                               value="{{ form.additional_diagnoses.value|default:'' }}">
+                        <p class="form-hint">Comma-separated ICD-10 codes</p>
+                        {% if form.additional_diagnoses.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.additional_diagnoses.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="id_medication_history" class="form-label">Medication History</label>
+                        <input type="text" name="medication_history" id="id_medication_history"
+                               class="form-input"
+                               placeholder="Prednisone, Pyridostigmine"
+                               value="{{ form.medication_history.value|default:'' }}">
+                        <p class="form-hint">Comma-separated list of previous medications</p>
+                        {% if form.medication_history.errors %}
+                        <p class="text-xs text-red-600 mt-1">{{ form.medication_history.errors.0 }}</p>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Patient Records -->
+        <div class="card">
+            <div class="card-section">
+                <h2 class="section-title">Patient Records</h2>
+                <div>
+                    <label for="id_patient_records" class="form-label">
+                        Clinical Notes <span class="text-red-500">*</span>
+                    </label>
+                    <textarea name="patient_records" id="id_patient_records"
+                              class="form-textarea font-mono text-xs"
+                              rows="12"
+                              placeholder="Paste patient clinical records here..."
+                              required>{{ form.patient_records.value|default:'' }}</textarea>
+                    <p class="form-hint">Include clinic notes, lab results, vital signs, and other relevant clinical information.</p>
+                    {% if form.patient_records.errors %}
+                    <p class="text-xs text-red-600 mt-1">{{ form.patient_records.errors.0 }}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit -->
+        <div class="flex justify-end gap-3">
+            <a href="{% url 'order_list' %}" class="btn-secondary">Cancel</a>
+            <button type="submit" class="btn-primary">
+                Create Order
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}
