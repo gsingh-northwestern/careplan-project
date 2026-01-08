@@ -1,6 +1,6 @@
 # Railway Deployment Guide
 
-**Current Production URL:** https://web-production-a90a.up.railway.app
+**Current Production URL:** https://web-production-baa93.up.railway.app/orders/new/
 
 This guide covers deploying the Care Plan Generator to Railway, including critical lessons learned from debugging production issues.
 
@@ -26,7 +26,7 @@ Then in Railway:
 1. New Project → Deploy from GitHub repo
 2. Add PostgreSQL database
 3. Set environment variables (see below)
-4. **CRITICAL**: Check Custom Start Command is EMPTY
+4. **CRITICAL**: Set Custom Start Command (see step 5 below)
 5. Deploy
 
 ---
@@ -54,7 +54,22 @@ release: python manage.py migrate --noinput
 
 ## Critical Lessons Learned
 
-### Issue #1: Railway Custom Start Command Overrides Procfile
+### Issue #1: Railway Doesn't Auto-Run Procfile `release` Commands
+
+**Problem**: Database tables don't exist after deployment. Migrations never ran.
+
+**Root Cause**: Railway doesn't automatically execute `release:` commands from Procfile like Heroku does. The Procfile `release: python manage.py migrate --noinput` is ignored.
+
+**Fix**: Combine migrations into the start command. Set Custom Start Command to:
+```
+python manage.py migrate --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 300 --graceful-timeout 300 --worker-class gthread --workers 1 --threads 4
+```
+
+This ensures migrations run every time the container starts, before gunicorn launches.
+
+---
+
+### Issue #2: Railway Custom Start Command Overrides Procfile
 
 **Problem**: Care plan generation worked locally but failed on Railway with worker timeouts after ~30 seconds.
 
@@ -68,7 +83,7 @@ release: python manage.py migrate --noinput
   gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 300 --graceful-timeout 300 --worker-class gthread --workers 1 --threads 4
   ```
 
-### Issue #2: Anthropic SDK Default 30-Second Timeout
+### Issue #3: Anthropic SDK Default 30-Second Timeout
 
 **Problem**: The `anthropic` Python SDK uses `httpx` under the hood, which has a default 30-second timeout. Care plan generation takes 60-90+ seconds.
 
@@ -80,7 +95,7 @@ client = anthropic.Anthropic(
 )
 ```
 
-### Issue #3: Gunicorn Worker Configuration
+### Issue #4: Gunicorn Worker Configuration
 
 **Problem**: Default gunicorn uses sync workers with 30-second timeout. Long-running API requests get killed.
 
@@ -172,12 +187,16 @@ LLM_MOCK_MODE=False
 ANTHROPIC_API_KEY=sk-ant-...
 ```
 
-### 5. CRITICAL: Check Custom Start Command
+### 5. CRITICAL: Set Custom Start Command
 
 1. Go to service → Settings → Deploy
 2. Find "Custom Start Command"
-3. **Make sure it is EMPTY** (or contains full command with timeouts)
-4. If it says something like `gunicorn config.wsgi --bind 0.0.0.0:$PORT`, this is WRONG - it's missing timeout settings
+3. **Set it to this exact command** (runs migrations then starts server):
+   ```
+   python manage.py migrate --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 300 --graceful-timeout 300 --worker-class gthread --workers 1 --threads 4
+   ```
+4. If left empty, migrations won't run and you'll get "no such table" errors
+5. If set without migrations, database tables won't be created
 
 ### 6. Deploy
 
@@ -212,7 +231,10 @@ client = anthropic.Anthropic(
 )
 ```
 
-**Railway Custom Start Command**: EMPTY
+**Railway Custom Start Command** (REQUIRED - do not leave empty):
+```
+python manage.py migrate --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 300 --graceful-timeout 300 --worker-class gthread --workers 1 --threads 4
+```
 
 **Success Metrics**:
 - Care plan generation: ~60-90 seconds

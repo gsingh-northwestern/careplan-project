@@ -2,7 +2,9 @@
 
 A web application for specialty pharmacies to generate care plans from patient records using AI.
 
-**Live Demo:** https://web-production-a90a.up.railway.app
+**Live Demo:** [https://web-production-baa93.up.railway.app/orders/new/](https://web-production-baa93.up.railway.app/orders/new/)
+
+**Design & User Journey:** [Figma Board](https://www.figma.com/board/9XyF0eifxW45fTG60LJs69/Lamar-Health---Care-Plan-Project?node-id=2-16&t=h71BJT3G39KtgUQh-1)
 
 ## Problem Statement
 
@@ -111,21 +113,21 @@ The application is configured for one-click deployment to Railway.
    ANTHROPIC_API_KEY=<your-api-key>
    ```
 
-5. **CRITICAL: Check Custom Start Command**
+5. **CRITICAL: Set Custom Start Command**
    - Go to: Service → Settings → Deploy → Custom Start Command
-   - **Must be EMPTY** (uses Procfile) or contain full command with timeouts
-   - If set without timeouts, care plan generation will fail!
+   - **Set this exact command** (runs migrations + starts server with timeouts):
+     ```
+     python manage.py migrate --noinput && gunicorn config.wsgi --bind 0.0.0.0:$PORT --timeout 300 --graceful-timeout 300 --worker-class gthread --workers 1 --threads 4
+     ```
+   - If left empty, migrations won't run (Railway ignores Procfile `release` commands)
 
 6. **Deploy**
    Railway automatically deploys on push to main branch.
 
-### Critical Deployment Note
+### Critical Deployment Notes
 
-Care plan generation takes 60-90 seconds. If deployment fails with timeouts:
-
-1. **Custom Start Command**: Must be EMPTY or include `--timeout 300`
-2. **Anthropic client**: Must have `timeout=300.0` (already configured)
-3. **Procfile**: Must have full timeout settings (already configured)
+1. **Custom Start Command is REQUIRED** - Railway ignores Procfile `release` commands, so migrations must be in the start command
+2. **Timeouts**: Care plan generation takes 60-90 seconds. The start command includes `--timeout 300` for gunicorn, and `llm_service.py` has `timeout=300.0` for the Anthropic client
 
 See [DEPLOYMENT.md](DEPLOYMENT.md) for full troubleshooting guide.
 
@@ -237,22 +239,30 @@ lamar-careplan/
 
 ## What's Intentionally Left Out
 
-For this prototype, the following were not implemented:
+**Philosophy:** Build and validate core platform and data models first, enabling easier demo and iteration before adding complexity.
 
-1. **User Authentication**: Would add Django auth for production
-2. **Audit Logging**: Would add django-auditlog for PHI compliance
-3. **PDF Parsing**: Text input only; would add PyMuPDF for PDF upload
-4. **ICD-10 Autocomplete**: Would integrate CMS database
-5. **Provider NPI Validation**: Would use NPPES API to verify NPIs
+| Feature | Reason | Production Path |
+|---------|--------|-----------------|
+| **User Authentication** | Prioritized core workflow demo | Django auth with role-based permissions |
+| **Audit Logging** | Adds complexity for initial demo | django-auditlog for HIPAA PHI access tracking |
+| **PDF Parsing** | User research showed copy/paste from EHR is dominant workflow | PyMuPDF or pdfplumber for PDF upload |
+| **ICD-10 Autocomplete** | Would require external database integration | CMS ICD-10 database with typeahead search |
+| **NPI Validation** | External API dependency | NPPES API for real-time verification |
 
 ## If I Had Another Day
 
-1. Implement PDF upload with text extraction
-2. Add ICD-10 code autocomplete from official database
-3. Build dashboard with metrics (orders/day, avg generation time)
-4. Add comprehensive test coverage (target 80%)
-5. Implement proper logging with structured JSON
-6. Add caching for repeated LLM calls
+### High Priority
+- **PHI Tokenization** - Replace identifiers with tokens before LLM calls (critical for HIPAA without BAA)
+- **Async Generation** - Background task queue (Celery) for care plan generation with progress indicator
+- **Response Streaming** - Stream care plan as it generates for better UX
+
+### Medium Priority
+- **LLM Agnostic Architecture** - Abstract provider interface to swap between Claude/GPT/Llama
+- **Caching Layer** - Redis cache for repeated LLM calls with similar inputs
+
+### Lower Priority
+- **Analytics Dashboard** - Orders/day, avg generation time, model usage metrics
+- **Structured JSON Logging** - Machine-parseable logs for aggregation
 
 ## License
 
