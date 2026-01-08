@@ -2,7 +2,7 @@
 
 A web application for specialty pharmacies to generate care plans from patient records using AI.
 
-**Live Demo:** [TBD - Deploy on Railway]
+**Live Demo:** https://web-production-a90a.up.railway.app
 
 ## Problem Statement
 
@@ -89,7 +89,7 @@ The application is configured for one-click deployment to Railway.
    git init
    git add .
    git commit -m "Initial commit"
-   git remote add origin https://github.com/YOUR_USERNAME/lamar-careplan.git
+   git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
    git push -u origin main
    ```
 
@@ -189,7 +189,7 @@ lamar-careplan/
 ### Patient
 - `first_name`, `last_name`: Patient name
 - `mrn`: Medical Record Number (6 digits, unique)
-- `dob`: Date of birth (optional)
+- `dob`: Date of birth (required)
 
 ### Order
 - Links patient and provider
@@ -220,7 +220,8 @@ lamar-careplan/
 - **Warn**: Same name + DOB with different MRN
 
 ### Order Duplicates
-- **Warn**: Same patient + medication within 30 days
+- **Warn (HIGH)**: Same patient + medication on the SAME DAY
+- **Warn (MEDIUM)**: Same patient + medication within 30 days
 
 ## API Endpoints
 

@@ -112,10 +112,13 @@
                         {% endif %}
                     </div>
                     <div>
-                        <label for="id_patient_dob" class="form-label">Date of Birth</label>
+                        <label for="id_patient_dob" class="form-label">
+                            Date of Birth <span class="text-red-500">*</span>
+                        </label>
                         <input type="date" name="patient_dob" id="id_patient_dob"
                                class="form-input"
-                               value="{{ form.patient_dob.value|default:'' }}">
+                               value="{{ form.patient_dob.value|default:'' }}"
+                               required>
                         {% if form.patient_dob.errors %}
                         <p class="text-xs text-red-600 mt-1">{{ form.patient_dob.errors.0 }}</p>
                         {% endif %}

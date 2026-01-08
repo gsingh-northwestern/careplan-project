@@ -1,5 +1,7 @@
 # Railway Deployment Guide
 
+**Current Production URL:** https://web-production-a90a.up.railway.app
+
 This guide covers deploying the Care Plan Generator to Railway, including critical lessons learned from debugging production issues.
 
 ## Quick Start
@@ -16,7 +18,7 @@ This guide covers deploying the Care Plan Generator to Railway, including critic
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/lamar-careplan.git
+git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
 git push -u origin main
 ```
 
@@ -141,7 +143,7 @@ client = anthropic.Anthropic(
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/YOUR_USERNAME/lamar-careplan.git
+git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
 git push -u origin main
 ```
 
