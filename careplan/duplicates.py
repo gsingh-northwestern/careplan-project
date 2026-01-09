@@ -2,15 +2,14 @@
 Duplicate detection for the Care Plan Generator.
 
 Detects potential duplicate entries for:
-- Providers: Exact NPI match (block) or similar name with different NPI (warn)
+- Providers: Same NPI with different name (warn) or similar name with different NPI (warn)
 - Patients: Same MRN with mismatched name/DOB (warn) or same name+DOB with different MRN (warn)
 - Orders: Same patient + medication within time window (two-tier severity)
 
-Note: Patients with same MRN are NOT blocked because patients can have multiple orders.
-The system reuses existing patient records for new orders.
+Note: Providers and patients with same identifiers (NPI/MRN) are NOT blocked because
+they can have multiple orders. The system reuses existing records for new orders.
 
 Result types:
-- 'block': Cannot proceed, duplicate exists (providers only)
 - 'warn': Can proceed but user should verify
 - 'ok': No duplicates detected
 """
@@ -79,8 +78,9 @@ def check_provider_duplicate(
     Check for duplicate providers.
 
     Detection rules:
-    1. Exact NPI match -> BLOCK (can't have two providers with same NPI)
-    2. Similar name with different NPI -> WARN (might be a typo/error)
+    1. Exact NPI match with same name -> OK (will reuse existing provider)
+    2. Exact NPI match with different name -> WARN (data entry mismatch)
+    3. Similar name with different NPI -> WARN (might be a typo/error)
 
     Args:
         name: Provider name to check
@@ -100,11 +100,20 @@ def check_provider_duplicate(
 
     exact_npi = npi_query.first()
     if exact_npi:
-        return DuplicateResult(
-            'block',
-            f"Provider with NPI {npi} already exists: {exact_npi.name}",
-            [{'id': exact_npi.id, 'name': exact_npi.name, 'npi': exact_npi.npi}]
-        )
+        # Check if name matches the existing provider
+        name_matches = exact_npi.name.lower().strip() == name.lower().strip()
+
+        if name_matches:
+            # Same NPI with matching name - OK, will reuse provider
+            return DuplicateResult('ok')
+        else:
+            # Same NPI but different name - warn about potential data entry error
+            return DuplicateResult(
+                'warn',
+                f"Provider with NPI {npi} exists as '{exact_npi.name}'. "
+                f"The existing provider record will be used for this order.",
+                [{'id': exact_npi.id, 'name': exact_npi.name, 'npi': exact_npi.npi}]
+            )
 
     # Check for similar name with different NPI
     # Split name and filter out common prefixes

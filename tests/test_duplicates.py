@@ -28,11 +28,17 @@ class ProviderDuplicateTests(TestCase):
             npi='0987654321'
         )
 
-    def test_exact_npi_match_blocks(self):
-        """Exact NPI match should return blocking result."""
+    def test_same_npi_same_name_ok(self):
+        """Same NPI with matching name should be OK (provider reuse)."""
         result = check_provider_duplicate('Dr. Jane Smith', '1234567890')
-        self.assertEqual(result.type, 'block')
-        self.assertIn('already exists', result.message)
+        self.assertEqual(result.type, 'ok')
+
+    def test_same_npi_different_name_warns(self):
+        """Same NPI with different name should warn (data entry mismatch)."""
+        result = check_provider_duplicate('Dr. Different Name', '1234567890')
+        self.assertEqual(result.type, 'warn')
+        self.assertIn('exists as', result.message)
+        self.assertIn('existing provider record will be used', result.message)
 
     def test_different_npi_ok(self):
         """Different NPI should return OK."""
