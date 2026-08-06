@@ -91,7 +91,7 @@ The application is configured for one-click deployment to Railway.
    git init
    git add .
    git commit -m "Initial commit"
-   git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
+   git remote add origin https://github.com/gsingh-honsla/careplan-project.git
    git push -u origin main
    ```
 

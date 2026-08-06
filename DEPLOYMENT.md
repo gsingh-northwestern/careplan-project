@@ -18,7 +18,7 @@ This guide covers deploying the Care Plan Generator to Railway, including critic
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
+git remote add origin https://github.com/gsingh-honsla/careplan-project.git
 git push -u origin main
 ```
 
@@ -158,7 +158,7 @@ client = anthropic.Anthropic(
 git init
 git add .
 git commit -m "Initial commit"
-git remote add origin https://github.com/gsingh-northwestern/careplan-project.git
+git remote add origin https://github.com/gsingh-honsla/careplan-project.git
 git push -u origin main
 ```
 
